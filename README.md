@@ -1,6 +1,7 @@
 # Name + Stevens Login
 Jason Rossi, jrossi3@stevens.edu
 Nouman Syed, nsyed1@stevens.edu
+Atishay Jain, ajain70@stevens.edu
 
 # The URL of your public GitHub repo
 https://github.com/Jrossi3/WebForum
@@ -40,3 +41,12 @@ We tested persistence in a very simple way. We ran the command "curl http://127.
 3) Persistence
 
 We tested persistence through 2 different ways. Our first way was restarting the server through running two commands to end and start the server. There is a "kill $PID" command and a "flask run &" command to end and start the server resepctively. The second way of testing was giving it a bad request. The exact command is "curl http://127.0.0.1:5000/post/fulltext" and here this is a bad request because it is an unfinished request and therefore will return an error. Then there is a test to see if the post is still existing after the command is run. There are many comments in the testing to show the exact specifics of when these tests occur. 
+
+4) Threaded replies
+
+We tested threaded replies we test the threaded replies, we have send a POST request to the URL with an 'id' parameter and a JSON object containing a 'msg' field. The exact command is "curl http://127.0.0.1:5000/post/3" in which after post is the postId in which we want to insert the thread into the thread array. Inside the thread it should generate a reply id, a msg, a key and timestamp when returning. 
+
+
+5) Thread based range queries
+
+We tested thread based range queries by running: curl "http://127.0.0.1:5000/post/3/thread" in order to retrieve all the threaded replies within that particular post whose id is based which is "3" in this case. The output should a return as a response providing all the threaded replies to that post and should ignore any other posts which aren't a part of that post's replies.
