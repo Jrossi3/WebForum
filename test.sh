@@ -144,6 +144,42 @@ else
   echo "Message not updated."
 fi
 
+#threaded_replies
+
+response=$(curl http://127.0.0.1:5000/post/3 -X POST -d '{"msg": "Test Reply"}')
+status=$(echo $response | jq -r '.status')
+msg=$(echo $response | jq -r '.msg')
+reply_id=$(echo $response | jq -r '.id')
+
+if [ $status -ne 20 ] || [ "$msg" != "This is a reply" ]; then
+  echo "Threaded replies test failed"
+  exit 1
+fi
+
+db_reply=$(curl http://127.0.0.1:5000/post/3/thread/$reply_id)
+db_reply_msg=$(echo $db_reply | jq -r '.msg')
+
+if [ "$db_reply_msg" != "This is a reply" ]; then
+  echo "Threaded replies data failed"
+  exit 1
+fi
+
+echo "Threaded replies test passed"
+
+
+
+#thread based range queries
+curl http://localhost:5000/post -X POST -d '{"msg": "Test Post"}'
+RESPONSE=$(curl http://localhost:5000/post/3/thread)
+THREADS=$(echo $RESPONSE | jq -r '.[] | .msg')
+if [ "$THREADS" != "Test Post" ]; then
+  echo "Failed to retrieve threads for post 3."
+  exit 1
+else
+  echo "Threads successfully retrieved for post 3."
+fi
+
+
 # Clean up
 key=$(echo $New | jq -r '.key')
 curl -X DELETE http://127.0.0.1:5000/post/$id/delete/$key
