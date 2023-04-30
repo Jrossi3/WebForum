@@ -237,15 +237,3 @@ def update_post(id, key):
 if __name__ == "__main__":
     app.run()
 
-
-# IGNORE:
-# def get_post_by_id(id):
-#     # Get a post from the database by ID
-#     with lock:
-#         posts_collection = db["posts_collection"]
-#         post = posts_collection.find_one({"id": id})
-
-#     if post is None:
-#         return f"Post with ID: {id} not found", 404
-
-#     return post
