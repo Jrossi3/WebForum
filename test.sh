@@ -11,6 +11,8 @@ PID=$!
 # Wait for the app to start up
 sleep 2
 
+# Function to clear the db
+
 # Test POST /post and GET /post/id
 # This test will exit immediately if the POST /post or GET /post/id fails.
 curl http://127.0.0.1:5000/post -X POST -d '{"msg": "hi my name is jason"}'
@@ -20,11 +22,11 @@ timestamp=$(echo $RESPONSE | jq -r '.timestamp')
 id=$(echo $RESPONSE | jq -r '.id')
 
 # GET /post/id test
-if [ "$RESPONSE" != "Post with ID: 1 not found" ]; then
-  echo "Get /post/id passed."
-else
+if [ "$RESPONSE" == "Post with ID: 1 not found" ]; then
   echo "Get /post/id failed."
   exit 1
+else
+  echo "Get /post/id passed."
 fi
 
 # Check if the response matches the expected output
@@ -59,11 +61,12 @@ if [ "$EXISTS" != "Post with ID: $id not found" ]; then
   echo "Persistence passed."
 else
   echo "Persistence failed."
+  exit 1
 fi
 
 # Testing persistence for a bad request to see if the post still exists
 # This test will exit immediately if the persistence fails.
-curl asjknfadj
+curl http://127.0.0.1:5000/post/fulltext
 EXISTS=$(curl http://localhost:5000/post/$id)
 
 if [ "$EXISTS" != "Post with ID: $id not found" ]; then
@@ -110,11 +113,11 @@ curl -X PUT -d '{"msg": "hello I am update"}' http://127.0.0.1:5000/post/$id/upd
 New=$(curl http://localhost:5000/post/1)
 newMsg=$(echo $New | jq -r '.msg')
 
-if [ "$msg" != "$newMsg" ]; then
-  echo "Message updated."
-else
-  echo "Message not updated."
+if [ "$msg" == "$newMsg" ]; then
+  echo "Message update failed."
   exit 1
+else
+  echo "Message update passed."
 fi
 
 # Clean up
@@ -142,6 +145,32 @@ else
 fi
 
 # Clean up
+key=$(echo $New | jq -r '.key')
+curl -X DELETE http://127.0.0.1:5000/post/$id/delete/$key
+
+# Write tests for Fulltext search
+# This will exit immediately if the fulltext search fails
+curl http://127.0.0.1:5000/post -X POST -d '{"msg": "hi my name is jason"}'
+RESPONSE=$(curl http://127.0.0.1:5000/post/fulltext/"hi%20my%20name%20is%20jason")
+echo "$RESPONSE"
+key=$(echo $RESPONSE | jq -r '.[0].key')
+timestamp=$(echo $RESPONSE | jq -r '.[0].timestamp')
+id=$(echo $RESPONSE | jq -r '.[0].id')
+thread=$(echo $RESPONSE | jq -r '.[0].thread')
+msg=$(echo $RESPONSE | jq -r '.[0].msg')
+EXPECTED=[{'"id"':$id,'"key"':'"'$key'"','"msg"':'"'$msg'"','"thread"':$thread,'"timestamp"':'"'$timestamp'"'}]
+echo "$EXPECTED"
+
+if [ "$RESPONSE" == "$EXPECTED" ]; then
+  echo "Fulltext search passed."
+else
+  echo "Fulltext search failed."
+  exit 1
+fi
+
+# Clean up
+New=$(curl http://localhost:5000/post/1)
+id=$(echo $New | jq -r '.id')
 key=$(echo $New | jq -r '.key')
 curl -X DELETE http://127.0.0.1:5000/post/$id/delete/$key
 
