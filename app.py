@@ -39,7 +39,6 @@ def post_request():
     post_id = max_id + 1
 
     # Get the current time
-
     timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Generate a random key
