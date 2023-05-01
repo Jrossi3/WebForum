@@ -67,69 +67,60 @@ def post_request():
 
 @app.route("/post/<int:id>", methods=["POST"])
 def threaded_replies(id):
-
     body = request.get_json(force=True)
     msg = body['msg']
-    # key = body['key']
     if not isinstance(msg, str) or msg is None:
         return "Post content should be of type string", 400
-
-    # Get the parent post object
+    
     parent_post = db["posts_collection"].find_one({"id": id})
     if parent_post is None:
         return "Parent post not found", 404
-    
+        
     key = secrets.token_hex(16)
 
-    # if parent_post["key"] != key:
-    #     return "Key is invalid"
-
-    # Generate a new UUID for the reply
-    max_id = 0
-    for thread in parent_post["thread"]:
-        if thread["id"] > max_id:
-            max_id = thread["id"]
-    reply_id = max_id + 1
-    timestamp = datetime.now()
+    # Generate a new reply id
+    max_reply_id = parent_post.get("max_reply_id", 0)
+    reply_id = max_reply_id + 1
+    timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
     reply = {
         "id": reply_id,
         "msg": msg,
         "key": key,
-        "timestamp": timestamp
+        "timestamp": timestamp,
+        "parent_id": parent_post["id"],
+        "thread": []
     }
 
     with lock:
         posts_collection = db["posts_collection"]
-        posts_collection.update_one({"_id": ObjectId(parent_post["_id"])},
-                                    {"$push": {"thread": reply}})
+        posts_collection.update_one(
+            {"_id": ObjectId(parent_post["_id"])},
+            {"$push": {"thread": reply}, "$set": {"max_reply_id": reply_id}}
+        )
 
-    inserted_reply = posts_collection.find_one(
-        {"id": id, "thread.id": reply_id},
-        {"_id": 0, "thread.$": 1}
-    )
+    return jsonify(reply), 200
 
-    return jsonify(inserted_reply["thread"][0]), 200
-
-
-
-@app.route("/post/<int:id>/thread", methods=['GET'])
-def get_thread_queries(id):
-    # Get the threads of a post from the database by ID
+@app.route("/post/<string:start>/<string:end>", methods=['GET'])
+def date_time_queries(start, end):
     with lock:
         posts_collection = db["posts_collection"]
-        post = posts_collection.find_one({"id": id})
-        threads_in_post = post["thread"]
+        if start is None and end is None:
+            return "Both Start and End cannot be None", 404
+        elif start is None:
+            posts = posts_collection.find({"timestamp": {"$lte": end}})
+        elif end is None:
+            posts = posts_collection.find({"timestamp": {"$gte": start}})
+        else:
+            posts = posts_collection.find({"timestamp": {"$gte": start, "$lte": end}})
 
-    if post is None:
-        return f"Post with ID: {id} not found", 404
+    result = []
+    for post in posts:
+        post_dict = dict(post)
+        post_dict.pop("_id", None)
+        result.append(post_dict)
 
-    threads_list = list(threads_in_post)
-    for thread in threads_list:
-        thread.pop("_id", None)
-
-    return jsonify(threads_list), 200
-
+    return jsonify(result), 200
 
 @app.route("/post/<int:id>", methods=['GET'])
 def get_post(id):

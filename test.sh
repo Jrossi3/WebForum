@@ -144,14 +144,14 @@ else
   echo "Message not updated."
 fi
 
-#threaded_replies
+# Threaded replies
+curl http://127.0.0.1:5000/post -X POST -d '{"msg": "hi my name is jason"}'
+RESPONSE=$(curl http://127.0.0.1:5000/post/3 -X POST -d '{"msg": "Test Reply"}')
+status_code=$(echo $RESPONSE | jq -r '.status')
+msg=$(echo $RESPONSE | jq -r '.msg')
+reply_id=$(echo $RESPONSE | jq -r '.id')
 
-response=$(curl http://127.0.0.1:5000/post/3 -X POST -d '{"msg": "Test Reply"}')
-status=$(echo $response | jq -r '.status')
-msg=$(echo $response | jq -r '.msg')
-reply_id=$(echo $response | jq -r '.id')
-
-if [ $status -ne 20 ] || [ "$msg" != "This is a reply" ]; then
+if [ $status_code -ne 200 ] || [ "$msg" != "This is a reply" ]; then
   echo "Threaded replies test failed"
   exit 1
 fi
@@ -166,18 +166,12 @@ fi
 
 echo "Threaded replies test passed"
 
+#datetime range based queries
+#here start and end are timestamps
+curl -X GET http://127.0.0.1:5000/post/<string:start>/<string:end>
 
 
-#thread based range queries
-curl http://localhost:5000/post -X POST -d '{"msg": "Test Post"}'
-RESPONSE=$(curl http://localhost:5000/post/3/thread)
-THREADS=$(echo $RESPONSE | jq -r '.[] | .msg')
-if [ "$THREADS" != "Test Post" ]; then
-  echo "Failed to retrieve threads for post 3."
-  exit 1
-else
-  echo "Threads successfully retrieved for post 3."
-fi
+
 
 
 # Clean up
