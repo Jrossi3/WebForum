@@ -131,6 +131,7 @@ def date_time_queries(start, end):
     if end.lower() == "none":
         end = end.lower()
     # print(end)
+    timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
     with lock:
         posts_collection = db["posts_collection"]
         if start == "none" and end == "none":
@@ -146,6 +147,7 @@ def date_time_queries(start, end):
     for post in posts:
         post_dict = dict(post)
         post_dict.pop("_id", None)
+        post_dict.pop("key", None)
         result.append(post_dict)
 
     return jsonify(result), 200
