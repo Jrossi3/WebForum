@@ -1,4 +1,6 @@
 #!/bin/bash
+# Installing MongoDB
+
 # apt-get install gnupg
 # curl -fsSL https://pgp.mongodb.com/server-6.0.asc | \
 #    gpg -o /usr/share/keyrings/mongodb-server-6.0.gpg \
@@ -12,7 +14,11 @@
 # echo "mongodb-mongosh hold" | dpkg --set-selections
 # echo "mongodb-org-mongos hold" | dpkg --set-selections
 # echo "mongodb-org-tools hold" | dpkg --set-selections
+
+# Pip package for mongoDB
 pip3 install pymongo
+
+# Installing some dependencies for python-ldap
 # apt-get install apt-utils -y
 # apt-get install libldap2-dev -y
 # apt-get install libsasl2-dev -y
@@ -22,8 +28,12 @@ pip3 install pyopenssl
 # pip3 install --upgrade setuptools wheel
 # pip3 install python-ldap
 pip3 install secrets
+
+# Installing MongoDB again with a different method
 # apt-get install mongodb
 # which mongod
+
+# Starting mongoDB
 # service mongod start
 # sleep 5
 
@@ -34,8 +44,8 @@ PID=$!
 # Wait for the app to start up
 sleep 2
 
-# Function to clear the db
-
+# Endpoint 1: Create post
+# Endpoint 2: Get post by ID
 # Test POST /post and GET /post/id
 # This test will exit immediately if the POST /post or GET /post/id fails.
 RESPONSE=$(curl http://127.0.0.1:5000/post -X POST -d '{"msg": "hi my name is jason"}')
@@ -46,24 +56,25 @@ id=$(echo $RESPONSE | jq -r '.id')
 TEST=$(curl http://127.0.0.1:5000/post/1)
 # GET /post/id test
 if [ "$TEST" == "Post with ID: {$id} not found" ]; then
-  echo "Get /post/id failed."
+  echo "Get post endpoint FAILED UNEXPECTEDLY."
   exit 1
 else
-  echo "Get /post/id passed."
+  echo "Get post endpoint PASSED AS EXPECTED."
 fi
 
 # Check if the response matches the expected output
 # POST /post test
 EXPECTED={'"id"':$id,'"key"':'"'$key'"','"timestamp"':'"'$timestamp'"'}
 if [ "$RESPONSE" != "$EXPECTED" ]; then
-  echo "ERROR: POST /post failed"
+  echo "Create post endpoint FAILED UNEXPECTEDLY."
   echo "Expected: $EXPECTED"
   echo "Actual:   $RESPONSE"
   exit 1
 else
-  echo "POST /post passed"
+  echo "Create post endpoint PASSED AS EXPECTED."
 fi
 
+# Extension 5: Persistence
 # Stop the server
 echo "Stopping Flask server..."
 kill $PID
@@ -81,9 +92,9 @@ sleep 2
 EXISTS=$(curl http://localhost:5000/post/$id)
 
 if [ "$EXISTS" != "Post with ID: $id not found" ]; then
-  echo "Persistence passed."
+  echo "Persistence PASSED AS EXPECTED."
 else
-  echo "Persistence failed."
+  echo "Persistence FAILED UNEXPECTEDLY."
   exit 1
 fi
 
@@ -93,12 +104,13 @@ curl http://127.0.0.1:5000/post/fulltext
 EXISTS=$(curl http://localhost:5000/post/$id)
 
 if [ "$EXISTS" != "Post with ID: $id not found" ]; then
-  echo "Persistence passed."
+  echo "Persistence PASSED AS EXPECTED."
 else
-  echo "Persistence failed."
+  echo "Persistence FAILED UNEXPECTEDLY."
   exit 1
 fi
 
+# Endpoint 3: Delete a post
 # Testing the delete function by creating 4 more posts and then deleting all 5 of the posts
 # This test will exit immediately if the deletion fails.
 counter=1
@@ -110,14 +122,15 @@ do
   curl -X DELETE http://127.0.0.1:5000/post/$id/delete/$key
   EXISTS=$(curl http://localhost:5000/post/$id)
   if [ "$EXISTS" = "Post with ID: $id not found" ]; then
-    echo "Delete passed."
+    echo "Delete endpoint PASSED AS EXPECTED."
   else
-    echo "Delete failed."
+    echo "Delete endpoint FAILED UNEXPECTEDLY."
     exit 1
   fi
   ((counter++))
 done
 
+# Extension 2: Update post
 # Test the update function
 # This should return "Message updated." Otherwise, the test will exit immediately.
 RESPONSE=$(curl http://127.0.0.1:5000/post -X POST -d '{"msg": "hi my name is jason"}')
@@ -130,10 +143,10 @@ New_post=$(curl http://localhost:5000/post/$id)
 newMsg=$(echo $New_post | jq -r '.msg')
 
 if [ "$msg" == "$newMsg" ]; then
-  echo "Message update failed."
+  echo "Update endpoint FAILED UNEXPECTEDLY."
   exit 1
 else
-  echo "Message update passed."
+  echo "Update endpoint PASSED AS EXPECTED."
 fi
 
 curl -X DELETE http://127.0.0.1:5000/post/$id/delete/$key
@@ -152,14 +165,15 @@ New_post=$(curl http://localhost:5000/post/$id)
 newMsg=$(echo $New_post | jq -r '.msg')
 
 if [ "$msg" == "$newMsg" ]; then
-  echo "Message update failed."
+  echo "Update endpoint FAILED AS EXPECTED."
 else
-  echo "Message update passed."
+  echo "Update endpoint PASSED UNEXPECTEDLY."
   exit 1
 fi
 
 curl -X DELETE http://127.0.0.1:5000/post/$id/delete/$key
 
+# Extension 1: Fulltext search
 # Testing for fulltext search
 # Creating multiple posts and then checking if the fulltext search works on each post
 # This will exit immediately if the fulltext search fails
@@ -171,24 +185,25 @@ while [ 1 ]
 do
   msg=$(echo $RESPONSE | jq -r '.[0].msg')
   if [ "$msg" != "hi my name is jason" ]; then
-    echo "Fulltext search failed."
+    echo "Fulltext search endpoint FAILED UNEXPECTEDLY."
     exit 1
   fi
   RESPONSE=$(echo "$RESPONSE" | jq 'del(.[0])')
   if [ "$RESPONSE" == [] ]; then
-    echo "Fulltext search passed."
+    echo "Fulltext search endpoint PASSED AS EXPECTED."
     break
   fi
 done
 
-# Clean up
+# Dropping Database
 DB_NAME="web_forum_database"
 mongo <<EOF
 use ${DB_NAME}
 db.dropDatabase()
 EOF
 
-#threaded replies
+# Extension 3: Threaded Replies
+# threaded replies
 curl http://127.0.0.1:5000/post -X POST -d '{"msg": "hi my name is Atishay"}'
 curl http://127.0.0.1:5000/post/1 -X POST -d '{"msg": "I am the reply"}'
 RESPONSE=$(curl http://127.0.0.1:5000/post/1)
@@ -198,12 +213,12 @@ thread=$(echo $RESPONSE | jq -r '.thread')
 timestamp=$(echo $RESPONSE | jq -r '.timestamp')
 EXPECTED={'"id"':$id,'"msg"':'"'$msg'"','"thread":[2],"timestamp"':'"'$timestamp'"'}
 if [ "$RESPONSE" != "$EXPECTED" ]; then
-  echo "ERROR: POST /post/id failed"
+  echo "Threaded Reply endpoint FAILED UNEXPECTEDLY"
   echo "Expected: $EXPECTED"
   echo "Actual:   $RESPONSE"
   exit 1
 else
-  echo "POST thread /post passed"
+  echo "Threaded Reply endpoint PASSED AS EXPECTED"
 fi
 curl http://127.0.0.1:5000/post/1 -X POST -d '{"msg": "I am the second reply"}'
 RESPONSE=$(curl http://127.0.0.1:5000/post/1)
@@ -214,22 +229,25 @@ thread=$(echo $RESPONSE | jq -r '.thread')
 timestamp=$(echo $RESPONSE | jq -r '.timestamp')
 EXPECTED={'"id"':$id,'"msg"':'"'$msg'"','"thread":[2,3],"timestamp"':'"'$timestamp'"'}
 if [[ "$RESPONSE" != *"$EXPECTED"* ]]; then
-  echo "ERROR: POST /post/id failed"
+  echo "Threaded Reply endpoint FAILED UNEXPECTEDLY"
   echo "Expected: $EXPECTED"
   echo "Actual:   $RESPONSE"
   exit 1
 else
-  echo "POST thread /post passed"
+  echo "Threaded Reply endpoint PASSED AS EXPECTED"
 fi
 
-# Clean up
+# Dropping Database
 DB_NAME="web_forum_database"
 mongo <<EOF
 use ${DB_NAME}
 db.dropDatabase()
 EOF
 
-#datetime 
+
+# Extension 4: Date and time search queries
+# datetime 
+# Creating Post 1
 curl http://127.0.0.1:5000/post -X POST -d '{"msg": "First Post"}'
 RESPONSE1=$(curl http://127.0.0.1:5000/post/1)
 key1=$(echo $RESPONSE1 | jq -r '.key')
@@ -240,6 +258,7 @@ timestamp1=$(echo $RESPONSE1 | jq -r '.timestamp')
 
 sleep 1
 
+# Creating Post 2
 curl http://127.0.0.1:5000/post -X POST -d '{"msg": "Second Post"}'
 RESPONSE2=$(curl http://127.0.0.1:5000/post/2)
 key2=$(echo $RESPONSE2 | jq -r '.key')
@@ -250,6 +269,7 @@ timestamp2=$(echo $RESPONSE2 | jq -r '.timestamp')
 
 sleep 1
 
+# Creating Post 3
 curl http://127.0.0.1:5000/post -X POST -d '{"msg": "Third Post"}'
 RESPONSE3=$(curl http://127.0.0.1:5000/post/3)
 key3=$(echo $RESPONSE3 | jq -r '.key')
@@ -260,6 +280,7 @@ timestamp3=$(echo $RESPONSE3 | jq -r '.timestamp')
 
 sleep 1
 
+# Creating Post 4
 curl http://127.0.0.1:5000/post -X POST -d '{"msg": "Fourth Post"}'
 RESPONSE4=$(curl http://127.0.0.1:5000/post/4)
 key4=$(echo $RESPONSE4 | jq -r '.key')
@@ -273,34 +294,34 @@ sleep 1
 EXPECTED='[{"id":1,"msg":"First Post","thread":[],"timestamp":"'$timestamp1'"},{"id":2,"msg":"Second Post","thread":[],"timestamp":"'$timestamp2'"},{"id":3,"msg":"Third Post","thread":[],"timestamp":"'$timestamp3'"},{"id":4,"msg":"Fourth Post","thread":[],"timestamp":"'$timestamp4'"}]'
 RESPONSE=$(curl http://127.0.0.1:5000/post/$timestamp1/$timestamp4)
 if [[ "$RESPONSE" != *"$EXPECTED"* ]]; then
-  echo "ERROR: POST /post/start/end failed"
+  echo "Date and time search endpoint FAILED UNEXPECTEDLY"
   echo "Expected: $EXPECTED"
   echo "Actual:   $RESPONSE"
   exit 1
 else
-  echo "POST /post passed"
+  echo "Date and time search endpoint PASSED AS EXPECTED"
 fi
 
 EXPECTED='[{"id":2,"msg":"Second Post","thread":[],"timestamp":"'$timestamp2'"},{"id":3,"msg":"Third Post","thread":[],"timestamp":"'$timestamp3'"},{"id":4,"msg":"Fourth Post","thread":[],"timestamp":"'$timestamp4'"}]'
 RESPONSE=$(curl http://127.0.0.1:5000/post/$timestamp2/none)
 if [ "$RESPONSE" != "$EXPECTED" ]; then
-  echo "ERROR: POST /post/start/end failed"
+  echo "Date and time search endpoint FAILED UNEXPECTEDLY"
   echo "Expected: $EXPECTED"
   echo "Actual:   $RESPONSE"
   exit 1
 else
-  echo "POST /post passed"
+  echo "Date and time search endpoint PASSED AS EXPECTED"
 fi
 
 EXPECTED='[{"id":1,"msg":"First Post","thread":[],"timestamp":"'$timestamp1'"},{"id":2,"msg":"Second Post","thread":[],"timestamp":"'$timestamp2'"},{"id":3,"msg":"Third Post","thread":[],"timestamp":"'$timestamp3'"}]'
 RESPONSE=$(curl http://127.0.0.1:5000/post/none/$timestamp3)
 if [[ "$RESPONSE" != *"$EXPECTED"* ]]; then
-  echo "ERROR: POST /post/start/end failed"
+  echo "Date and time search endpoint FAILED UNEXPECTEDLY"
   echo "Expected: $EXPECTED"
   echo "Actual:   $RESPONSE"
   exit 1
 else
-  echo "POST /post passed"
+  echo "Date and time search endpoint PASSED AS EXPECTED"
 fi
 
 echo "fourth"
@@ -308,15 +329,15 @@ echo "fourth"
 EXPECTED='Both Start and End cannot be None'
 RESPONSE=$(curl http://127.0.0.1:5000/post/none/none)
 if [[ "$RESPONSE" != *"$EXPECTED"* ]]; then
-  echo "ERROR: POST /post/start/end failed"
+  echo "Date and time search endpoint FAILED UNEXPECTEDLY"
   echo "Expected: $EXPECTED"
   echo "Actual:   $RESPONSE"
   exit 1
 else
-  echo "POST /post passed"
+  echo "Date and time search endpoint PASSED AS EXPECTED"
 fi
 
-# Clean up
+# Dropping Database
 DB_NAME="web_forum_database"
 mongo <<EOF
 use ${DB_NAME}
