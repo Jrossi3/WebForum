@@ -21,6 +21,7 @@ lock = Lock()
 app = Flask(__name__)
 
 
+# Endpoint 1: Create post
 @app.route("/post", methods=["POST"])
 def post_request():
     body = request.get_json(force=True)
@@ -28,7 +29,7 @@ def post_request():
     if not isinstance(msg, str) or msg is None:
         return "Post content should be of type string", 400
 
-    # Generate a new UUID for the post
+    # Generate a new ID for the post
     max_id_doc = db["posts_collection"].find_one(sort=[("id", -1)])
     if max_id_doc is None:
         max_id = 0
@@ -68,6 +69,7 @@ def post_request():
     return jsonify(post_dict), 200
 
 
+# Endpoint 2: Get post by ID
 @app.route("/post/<int:id>", methods=['GET'])
 def get_post(id):
     # Get a post from the database by ID
@@ -83,6 +85,8 @@ def get_post(id):
     post_dict.pop("key", None)
     return jsonify(post_dict), 200
 
+
+# Extension 1: Fulltext search
 @app.route("/post/fulltext/<string:msg>", methods=['GET'])
 def get_text(msg):
     # Get all posts from the database
@@ -101,6 +105,8 @@ def get_text(msg):
 
     return jsonify(posts_list), 200
 
+
+# Extension 3: Delete post
 @app.route("/post/<int:id>/delete/<string:key>", methods=["DELETE"])
 def delete_post(id, key):
     # Find the post with the given ID
@@ -129,6 +135,7 @@ def delete_post(id, key):
     return jsonify(post_dict), 200
 
 
+# Extension 2: Update post
 @app.route("/post/<int:id>/update/<string:key>", methods=["PUT"])
 def update_post(id, key):
     global flag
@@ -174,6 +181,8 @@ def update_post(id, key):
         flag = False
         return jsonify(post_dict), 201
 
+    
+# Extension 3: Threaded Replies
 @app.route("/post/<int:id>", methods=["POST"])
 def threaded_replies(id):
     body = request.get_json(force=True)
@@ -181,25 +190,18 @@ def threaded_replies(id):
     if not isinstance(msg, str) or msg is None:
         return "Post content should be of type string", 400
     
+    # Generate a new ID for the post
     key = secrets.token_hex(16)
-    # parent_post = db["posts_collection"].find_one({"id": id})
-    # if parent_post is None:
-    #     return "Parent post not found", 404
-        
     
-
-    # # Generate a new reply id
-    # max_reply_id = parent_post.get("max_reply_id", 0)
-    # reply_id = max_reply_id + 1
     timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-        # Generate a new UUID for the post
+    
     max_id_doc = db["posts_collection"].find_one(sort=[("id", -1)])
     if max_id_doc is None:
         max_id = 0
     else:
         max_id = max_id_doc["id"]
 
-    # Generate a new post_id by incrementing the maximum post_id
+    # Generate a new post_id by incrementing the maximum max_id
     reply_id = max_id + 1
     
 
@@ -208,9 +210,9 @@ def threaded_replies(id):
         "msg": msg,
         "key": key,
         "timestamp": timestamp,
-        # "parent_id": parent_post["id"],
         "thread": []
     }
+    
     # Insert the new post object into the database
     with lock:
         posts_collection = db["posts_collection"]
@@ -231,15 +233,14 @@ def threaded_replies(id):
     post_dict.pop("thread", None)
     return jsonify(post_dict), 200
 
-    # return jsonify(reply), 200
 
+# Extension 4: Date and time based range queries
 @app.route("/post/<string:start>/<string:end>", methods=['GET'])
 def date_time_queries(start, end):
     if start.lower() == "none":
         start = start.lower()
     if end.lower() == "none":
         end = end.lower()
-    # print(end)
     timestamp = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
     with lock:
         posts_collection = db["posts_collection"]
