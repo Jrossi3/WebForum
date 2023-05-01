@@ -44,7 +44,9 @@ We tested persistence through 2 different ways. Our first way was restarting the
 
 4) Threaded replies
 
-We tested threaded replies we test the threaded replies, we have send a POST request to the URL with an 'id' parameter and a JSON object containing a 'msg' field. The exact command is "curl http://127.0.0.1:5000/post/3" in which after post is the postId in which we want to insert the thread into the thread array. Inside the thread it should generate a reply id, a msg, a key and timestamp when returning. 
+We tested threaded replies for which we have send a POST request to the URL with an 'id' parameter and a JSON object containing a 'msg' field. For testing we first created a command just to generate a new post, using the command: "curl http://127.0.0.1:5000/post" and gave the msg as "First". Now that we have the first post available, our job is to now add threaded replies inside of this 1st post. The exact command is "curl http://127.0.0.1:5000/post/1" in which we gave a msg "First Reply".When then check if the threaded reply gets inserted inside of the thread array or not.it should finally generate a reply id, a msg, and timestamp when returning. 
+
+We tested the threaded replies 
 
 
 5) Date based range queries
